@@ -56,6 +56,7 @@ arabi_model = MCMCglmm(cbind(weight, height, silique, branch) ~ trait:partner - 
                        rcov   = ~us(trait:at.level(partner,    "L")):units +
                                  us(trait:at.level(partner, "NONE")):units,
                        family = rep("gaussian", num_traits),
+                       verbose = FALSE,
                        prior = prior,
                        data = arabi_data_std)
 Gs = array(arabi_model$VCV[,1:(4*num_traits*num_traits)], dim = c(1000, 2*num_traits, 2*num_traits))
