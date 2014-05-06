@@ -16,7 +16,7 @@ arabi_data$silique <- sqrt(arabi_data$silique)
 arabi_data$branch  <- sqrt(arabi_data$branch)
 
 arabi_data = arabi_data[complete.cases(arabi_data),]
-arabi_data = arabi_data[arabi_data$height > 10,]
+arabi_data = arabi_data[arabi_data$height > 0,]
 
 m_arabi_data = melt(arabi_data, id.vars = c('partner', 'block', 'ID', 'RIL'))
 ggplot(m_arabi_data, aes(x = value, color = partner)) +
@@ -42,7 +42,7 @@ arabi_data_std$height  <- scale(arabi_data_std$height)
 num_traits = 4
 prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
                       R2 = list(V = diag(num_traits), n = 0.002)),
-             G = list(G1 = list(V = diag(2*num_traits) * 0.02, n = num_traits+1)))
+             G = list(G1 = list(V = diag(2*num_traits) * 0.02, n = 2*num_traits+1)))
 arabi_model = MCMCglmm(cbind(weight, height, silique, branch) ~ trait:partner - 1,
                        random = ~us(trait:partner):RIL,
                        rcov   = ~us(trait:at.level(partner,    "L")):units +
@@ -62,3 +62,12 @@ G_mcmc_conf = apply(Gs, 2:3, quantile, c(0.025, 0.975))
 G_mcmc_conf = aperm(G_mcmc_conf, c(2, 3, 1))
 containsZero = function(x) ifelse(0 > x[1] & 0 < x[2], TRUE, FALSE)
 significant = !aaply(G_mcmc_conf, 1:2, containsZero)
+herit = data.frame(trait = traits,
+                   partner = rep(c('D', 'S'), each= 4),
+                   value = diag(G_mcmc),
+                   upper = diag(G_mcmc_conf[,,2]),
+                   lower = diag(G_mcmc_conf[,,1]))
+
+ggplot(herit, aes(trait, value, color = partner)) +
+geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
+theme_classic() + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~partner)
