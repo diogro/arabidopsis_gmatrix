@@ -7,7 +7,6 @@ library(MCMCglmm)
 library(gridExtra)
 library(gtools)
 
-
 raw_arabi_data <- read.csv2("./raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch")
@@ -17,7 +16,7 @@ arabi_data$silique <- sqrt(arabi_data$silique)
 arabi_data$branch  <- sqrt(arabi_data$branch)
 
 arabi_data = arabi_data[complete.cases(arabi_data),]
-arabi_data = arabi_data[arabi_data$height > 0,]
+#arabi_data = arabi_data[arabi_data$height > 0,]
 
 m_arabi_data = melt(arabi_data, id.vars = c('partner', 'block', 'ID', 'RIL'))
 ggplot(m_arabi_data, aes(x = value, color = partner)) +
@@ -41,7 +40,6 @@ m_arabi_data_std$block <- NULL
 m_arabi_data_std$value[m_arabi_data_std$partner == 'L'] = residuals(model_block_D)
 m_arabi_data_std$value[m_arabi_data_std$partner == 'NONE'] = residuals(model_block_S)
 arabi_data_std = dcast(m_arabi_data_std, partner+ID+RIL~variable)
-
 
 mask_L = arabi_data_std$partner == "L"
 arabi_data_std[ mask_L, traits] <- scale(arabi_data_std[ mask_L, traits])
@@ -71,12 +69,13 @@ G_mcmc_conf = apply(Gs, 2:3, quantile, c(0.025, 0.975))
 G_mcmc_conf = aperm(G_mcmc_conf, c(2, 3, 1))
 containsZero = function(x) ifelse(0 > x[1] & 0 < x[2], TRUE, FALSE)
 significant = !aaply(G_mcmc_conf, 1:2, containsZero)
-herit = data.frame(trait = factor(traits, levels = traits),
+herit = summary(arabi_model)$Gcovariances[seq(1, 4*num_traits*num_traits, 2*num_traits+1),1:3]
+herit = data.frame(trait = factor(rep(traits, 2), levels = traits),
                    partner = factor(rep(c('D', 'S'), each = 4), levels = c('S', 'D')),
-                   value = diag(G_mcmc),
-                   upper = diag(G_mcmc_conf[,,2]),
-                   lower = diag(G_mcmc_conf[,,1]))
+                   herit = herit[,1],
+                   lower = herit[,2],
+                   upper = herit[,3], row.names=NULL)
 
-ggplot(herit, aes(trait, value, color = partner)) +
+ggplot(herit, aes(trait, herit)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
-theme_classic(base_size = 20) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~partner)
+theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~partner)
