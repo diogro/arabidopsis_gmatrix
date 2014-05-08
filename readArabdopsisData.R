@@ -64,11 +64,11 @@ G_mcmc = apply(Gs, 2:3, mean)
 R_mcmc = apply(Rs, 2:3, mean)
 corr_G = cov2cor(G_mcmc)
 corr_R = cov2cor(R_mcmc)
-dimnames(G_mcmc) = dimnames(R_mcmc) = dimnames(corr_R) = dimnames(corr_G) = list(names_g, names_g)
 G_mcmc_conf = apply(Gs, 2:3, quantile, c(0.025, 0.975))
 G_mcmc_conf = aperm(G_mcmc_conf, c(2, 3, 1))
 containsZero = function(x) ifelse(0 > x[1] & 0 < x[2], TRUE, FALSE)
 significant = !aaply(G_mcmc_conf, 1:2, containsZero)
+dimnames(G_mcmc) = dimnames(R_mcmc) = dimnames(G_mcmc_conf)[1:2] = dimnames(corr_R) = dimnames(corr_G) = list(names_g, names_g)
 herit = summary(arabi_model)$Gcovariances[seq(1, 4*num_traits*num_traits, 2*num_traits+1),1:3]
 herit = data.frame(trait = factor(rep(traits, 2), levels = traits),
                    partner = factor(rep(c('D', 'S'), each = 4), levels = c('S', 'D')),
