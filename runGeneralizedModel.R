@@ -24,13 +24,31 @@ facet_wrap(~variable, ncol = 4, scale = "free_x")
 traits = c('weight', 'height', 'silique', 'branch')
 names_g = paste0(traits, rep(c('D', 'S'), each = 4))
 
-prior <- list(R = list(R1 = list(V = diag(4), nu = 1, fix = 1)),
-              G = list(G1 = list(V = diag(1), nu = 0.002),
-                       G2 = list(V = diag(1), nu = 0.002)))
-model = MCMCglmm(branch ~  1,
-                 random = ~partner:RIL + partner:block,
-                 rcov   = ~us(trait:partner):ID,
-                 family = "zipoisson",
-                 verbose = TRUE,
-                 prior = prior,
-                 data = arabi_data)
+prior <- list(R = list(R1 = list(V = diag(1), nu = 0.002, fix = 1)),
+              G = list(G1 = list(V = diag(1), nu = 2)))
+model_b = MCMCglmm(branch ~ trait:partner - 1,
+                   random = ~trait:RIL,
+                   rcov   = ~trait:units,
+                   family = "zapoisson",
+                   verbose = FALSE,
+                   prior = prior,
+                   nitt = 30000, burnin = 20000, thin = 10,
+                   pl = TRUE,
+                   data = arabi_data)
+plot(model_b$Sol)
+summary(model_b)
+
+prior <- list(R = list(R1 = list(V = diag(1), nu = 0.002, fix = 1)),
+              G = list(G1 = list(V = diag(1), nu = 0.002)))
+model_s = MCMCglmm(silique ~ trait:partner - 1,
+                   random = ~trait:RIL,
+                   rcov   = ~trait:units,
+                   family = "hupoisson",
+                   verbose = FALSE,
+                   prior = prior,
+                   saveX = TRUE,
+                   nitt = 30000, burnin = 20000, thin = 10,
+                   pl = TRUE,
+                   data = arabi_data)
+plot(model_s$Sol)
+summary(model_s)
