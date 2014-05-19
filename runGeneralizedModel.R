@@ -35,7 +35,6 @@ model_b = MCMCglmm(branch ~ trait:partner - 1,
                    nitt = 30000, burnin = 20000, thin = 10,
                    pl = TRUE,
                    data = arabi_data)
-plot(model_b$Sol)
 summary(model_b)
 
 prior <- list(R = list(R1 = list(V = diag(1), nu = 0.002, fix = 1)),
@@ -50,5 +49,4 @@ model_s = MCMCglmm(silique ~ trait:partner - 1,
                    nitt = 30000, burnin = 20000, thin = 10,
                    pl = TRUE,
                    data = arabi_data)
-plot(model_s$Sol)
 summary(model_s)
