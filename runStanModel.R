@@ -6,6 +6,7 @@ library(lme4)
 library(rstan)
 library(gridExtra)
 library(gtools)
+library(glmer2stan)
 
 raw_arabi_data <- read.csv2("./raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
@@ -14,6 +15,7 @@ names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "sil
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
 arabi_data = arabi_data[complete.cases(arabi_data),]
 #arabi_data = arabi_data[arabi_data$flower > 0,]
+arabi_data = arabi_data[arabi_data$height > 0,]
 
 arabi_data$weight  <- log(arabi_data$weight)
 mask_0 = arabi_data$iszero_silique = arabi_data$silique == 0
@@ -35,11 +37,11 @@ summary(lme4_model)
 traits = c('weight', 'height', 'silique', 'branch')
 names_g = paste0(traits, rep(c('D', 'S'), each = 4))
 
-branch_model = glmer2stan(branch ~ partner + (partner|RIL) + (1|block),
+branch_model = glmer2stan(branch ~ 1 + (partner|RIL) + (1|block),
                           data=arabi_data,
                           family="poisson"
                           sample = FALSE, calcDIC = FALSE)
-write(silique_model$model, file = "branch.stan")
+write(branch_model$model, file = "branch.stan")
 
 branch_data <- list(N = dim(arabi_data)[1],
                     branch = arabi_data$branch,
@@ -50,8 +52,8 @@ branch_stan_model = stan(file = './branch.stan', data = branch_data, chain=1)
 bm = extract(branch_stan_model, permuted = TRUE)
 
 
-the_formula <- list(iszero_silique ~ partner + (partner|RIL) + block,
-                    silique        ~ partner + (partner|RIL) + block)
+the_formula <- list(iszero_silique ~ 1 + (partner|RIL) + (1|block),
+                    silique        ~ 1 + (partner|RIL) + (1|block))
 silique_model = glmer2stan(the_formula, data=arabi_data,
                            family=list("binomial","gaussian"),
                            sample = FALSE, calcDIC = FALSE)
@@ -62,13 +64,14 @@ N_mu              = sum(!mask_0)
 iszero_silique_pi = as.integer(mask_0)
 partnerNONE_pi    = as.integer(as.factor(arabi_data$partner)) - 1
 RIL_pi            = as.integer(as.factor(arabi_data$RIL))
-block_pi          = as.integer(as.factor(arabi_data$block)) - 1
+block_pi          = as.integer(as.factor(arabi_data$block))
 bin_total_pi      = rep(1,dim(arabi_data)[1])
 silique_mu        = arabi_data$silique[!mask_0]
 partnerNONE_mu    = partnerNONE_pi[!mask_0]
 RIL_mu            = as.integer(as.factor(arabi_data$RIL))[!mask_0]
 block_mu          = block_pi[!mask_0]
 N_RIL             = length(unique(arabi_data$RIL))
+N_block           = length(unique(arabi_data$block))
 silique_data <- list(N_pi              = N_pi,
                      N_mu              = N_mu,
                      iszero_silique_pi = iszero_silique_pi,
@@ -80,7 +83,8 @@ silique_data <- list(N_pi              = N_pi,
                      partnerNONE_mu    = partnerNONE_mu,
                      RIL_mu            = RIL_mu,
                      block_mu          = block_mu,
-                     N_RIL             = N_RIL)
+                     N_RIL             = N_RIL,
+                     N_block           = N_block)
 silique_stan_model = stan(file = './silique.stan', data = silique_data, chain=1)
 
 sm = extract(silique_stan_model, permuted = TRUE)
@@ -88,11 +92,9 @@ replicates = dim(sm$vary_RIL)[1]
 bin_sim = array(0, c(replicates, N_pi))
 for(i in 1:replicates){
     vary_pi <- sm$vary_RIL[i, RIL_pi,1] +
-               sm$vary_RIL[i, RIL_pi,2] * partnerNONE_pi
-    glm_pi <- vary_pi +
-              sm$Intercept_pi[i] +
-              sm$beta_partnerNONE_pi[i] * partnerNONE_pi +
-              sm$beta_block_pi[i] * block_pi
+               sm$vary_RIL[i, RIL_pi,2] * partnerNONE_pi +
+               sm$vary_block[i, block_pi, 1]
+    glm_pi <- vary_pi + sm$Intercept_pi[i]
     glm_pi <- inv.logit( glm_pi )
     for(j in 1:N_pi)
         bin_sim[i,j] = rbinom(1, 1, prob = glm_pi[j])
@@ -102,11 +104,9 @@ post_zeros = mean(apply(bin_sim, 1, sum))
 silique_sim = array(0, c(replicates, N_mu))
 for(i in 1:replicates){
     vary_mu <- sm$vary_RIL[i, RIL_mu,3] +
-               sm$vary_RIL[i, RIL_mu,4] * partnerNONE_mu
-    glm_mu <- vary_mu +
-              sm$Intercept_mu[i] +
-              sm$beta_partnerNONE_mu[i] * partnerNONE_mu +
-              sm$beta_block_mu[i] * block_mu
+               sm$vary_RIL[i, RIL_mu,4] * partnerNONE_mu +
+               sm$vary_block[i, block_mu, 2]
+    glm_mu <- vary_mu + sm$Intercept_mu[i]
     for ( j in 1:N_mu )
         silique_sim[i,j] = rnorm(1, glm_mu[j], sm$sigma[i])
 }
@@ -117,15 +117,54 @@ hist((apply(silique_sim, 1, max))) ; abline(v =  max(((arabi_data$silique[!mask_
 hist((apply(silique_sim, 1, sum))) ; abline(v =  sum(((arabi_data$silique[!mask_0]))), col = "red")
 hist((apply(silique_sim, 1, sd)))  ; abline(v =   sd(((arabi_data$silique[!mask_0]))), col = "red")
 
-partner = arabi_data$partner[!mask_0]
-block = arabi_data$block[!mask_0]
-form = "scale(data) ~ block + partner + (0 + partner|RIL_mu)"
-extractHerit = function(data, lme_formula = form){
-    x = (lmer(as.formula(lme_formula)))
-    g_var = diag(VarCorr(x)[[1]])
-    r_var = attributes(VarCorr(x))$sc^2
-    g_var/(g_var + r_var)
+extractHerit = function(x) diag(cov(cbind(x[,3], x[,3]+x[,2])))
+silique_herit = t(apply(sm$vary_RIL_mu, 1, extractHerit)/rbind(sm$sigma, sm$sigma))
+dimnames(silique_herit) = list(NULL, c("L", "NONE"))
+rowMeans(silique_herit)
+boxplot(silique_herit)
+
+the_formula <- list(weight ~ 1 + (partner|RIL) + (1|block))
+weight_model = glmer2stan(the_formula, data=arabi_data,
+                           family="gaussian",
+                           sample = FALSE, calcDIC = FALSE)
+write(weight_model$model, file = "weight.stan")
+
+N           = dim(arabi_data)[1]
+weight      = arabi_data$weight
+partnerNONE = as.integer(as.factor(arabi_data$partner)) - 1
+RIL         = as.integer(as.factor(arabi_data$RIL))
+block       = as.integer(as.factor(arabi_data$block))
+N_RIL       = length(unique(arabi_data$RIL))
+N_block     = length(unique(arabi_data$block))
+weight_data <- list(N           = N,
+                    weight      = weight,
+                    partnerNONE = partnerNONE,
+                    RIL         = RIL,
+                    bloob       = block,
+                    N_RIL       = N_RIL,
+                    N_block     = N_block)
+weight_stan_model = stan(file = './weight.stan', data = weight_data, chain=1)
+
+wm = extract(weight_stan_model, permuted = TRUE)
+replicates = dim(wm$vary_RIL)[1]
+weight_sim = array(0, c(replicates, N))
+for(i in 1:replicates){
+    vary <- wm$vary_RIL[i, RIL,1] +
+               wm$vary_RIL[i, RIL,2] * partnerNONE +
+               wm$vary_bloob[i, block]
+    glm <- vary + wm$Intercept[i]
+    for ( j in 1:N )
+        weight_sim[i,j] = rnorm(1, glm[j], wm$sigma[i])
 }
-silique_herit = apply(silique_sim, 1, extractHerit)
-apply(silique_herit, 1, quantile, c(0.025, 0.5, 0.975))
-apply(silique_herit, 1, mean)
+par(mfrow=c(2, 3))
+hist((apply(weight_sim, 1, min))) ; abline(v =  min(((arabi_data$weight))), col = "red")
+hist((apply(weight_sim, 1, mean))); abline(v = mean(((arabi_data$weight))), col = "red")
+hist((apply(weight_sim, 1, max))) ; abline(v =  max(((arabi_data$weight))), col = "red")
+hist((apply(weight_sim, 1, sd)))  ; abline(v =   sd(((arabi_data$weight))), col = "red")
+hist(weight_sim[1,]); hist(arabi_data$weight)
+
+extractHerit = function(x) diag(cov(cbind(x[,1], x[,1]+x[,2])))
+herit_weight = t(apply(wm$vary_RIL, 1, extractHerit)/rbind(wm$sigma, wm$sigma))
+dimnames(herit_weight) = list(NULL, c("L", "NONE"))
+rowMeans(herit_weight)
+boxplot(herit_weight)
