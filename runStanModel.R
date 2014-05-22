@@ -14,12 +14,13 @@ names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "sil
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
 arabi_data = arabi_data[complete.cases(arabi_data),]
-#arabi_data = arabi_data[arabi_data$flower > 0,]
-arabi_data = arabi_data[arabi_data$height > 0,]
 
-arabi_data$weight  <- log(arabi_data$weight)
-mask_0 = arabi_data$iszero_silique = arabi_data$silique == 0
-arabi_data$silique[!mask_0]  <- log(arabi_data$silique[!mask_0])
+arabi_data = arabi_data[arabi_data$flower > 0,]
+arabi_data = arabi_data[arabi_data$height > 0,]
+arabi_data$weight  <- scale(log(arabi_data$weight))
+arabi_data$height  <- scale(as.numeric(arabi_data$height/10))
+mask_0 = arabi_data$silique == 0
+arabi_data$silique[!mask_0]  <- scale(log(arabi_data$silique[!mask_0]))
 #arabi_data$silique[arabi_data$silique == 0] = NA
 plot(silique~weight, arabi_data)
 plot(silique~height, arabi_data)
@@ -99,7 +100,7 @@ for(i in 1:replicates){
     for(j in 1:N_pi)
         bin_sim[i,j] = rbinom(1, 1, prob = glm_pi[j])
 }
-hist(apply(bin_sim, 1, sum)); abline(v = sum(arabi_data$iszero_silique), col = "red")
+hist(apply(bin_sim, 1, sum)); abline(v = sum(mask_0), col = "red")
 post_zeros = mean(apply(bin_sim, 1, sum))
 silique_sim = array(0, c(replicates, N_mu))
 for(i in 1:replicates){
@@ -130,7 +131,7 @@ weight_model = glmer2stan(the_formula, data=arabi_data,
 write(weight_model$model, file = "weight.stan")
 
 N           = dim(arabi_data)[1]
-weight      = arabi_data$weight
+weight      = arabi_data$weight[,1]
 partnerNONE = as.integer(as.factor(arabi_data$partner)) - 1
 RIL         = as.integer(as.factor(arabi_data$RIL))
 block       = as.integer(as.factor(arabi_data$block))
@@ -166,5 +167,67 @@ hist(weight_sim[1,]); hist(arabi_data$weight)
 extractHerit = function(x) diag(cov(cbind(x[,1], x[,1]+x[,2])))
 herit_weight = t(apply(wm$vary_RIL, 1, extractHerit)/rbind(wm$sigma, wm$sigma))
 dimnames(herit_weight) = list(NULL, c("L", "NONE"))
-rowMeans(herit_weight)
+colMeans(herit_weight)
 boxplot(herit_weight)
+
+weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (1|block),
+                    data = arabi_data)
+summary(weight_model)
+varRIL = diag(VarCorr(weight_model)$RIL)
+varRep = rep(VarCorr(weight_model)$block[1], 2)
+varRes = rep(attributes(VarCorr(weight_model))$sc^2, 2)
+h2 = varRIL/(varRIL + varRep + varRes)
+
+the_formula <- list(height ~ 1 + (partner|RIL) + (1|block))
+height_model = glmer2stan(the_formula, data=arabi_data,
+                           family="gaussian",
+                           sample = FALSE, calcDIC = FALSE)
+write(height_model$model, file = "height.stan")
+
+N           = dim(arabi_data)[1]
+height      = arabi_data$height[,1]
+partnerNONE = as.integer(as.factor(arabi_data$partner)) - 1
+RIL         = as.integer(as.factor(arabi_data$RIL))
+block       = as.integer(as.factor(arabi_data$block))
+N_RIL       = length(unique(arabi_data$RIL))
+N_block     = length(unique(arabi_data$block))
+height_data <- list(N           = N,
+                    height      = height,
+                    partnerNONE = partnerNONE,
+                    RIL         = RIL,
+                    bloob       = block,
+                    N_RIL       = N_RIL,
+                    N_block     = N_block)
+height_stan_model = stan(file = './height.stan', data = height_data, chain=1)
+#print(height_stan_model)
+
+hm = extract(height_stan_model, permuted = TRUE)
+replicates = dim(hm$vary_RIL)[1]
+height_sim = array(0, c(replicates, N))
+for(i in 1:replicates){
+    vary <- hm$vary_RIL[i, RIL,1] +
+               hm$vary_RIL[i, RIL,2] * partnerNONE +
+               hm$vary_block[i, block]
+    glm <- vary + hm$Intercept[i]
+    for ( j in 1:N )
+        height_sim[i,j] = rnorm(1, glm[j], hm$sigma[i])
+}
+par(mfrow=c(2, 3))
+hist((apply(height_sim, 1, min))) ; abline(v =  min(((arabi_data$height))), col = "red")
+hist((apply(height_sim, 1, mean))); abline(v = mean(((arabi_data$height))), col = "red")
+hist((apply(height_sim, 1, max))) ; abline(v =  max(((arabi_data$height))), col = "red")
+hist((apply(height_sim, 1, sd)))  ; abline(v =   sd(((arabi_data$height))), col = "red")
+hist(height_sim[1,]); hist(arabi_data$height)
+
+extractHerit = function(x) diag(cov(cbind(x[,1], x[,1]+x[,2])))
+herit_height = t(apply(hm$vary_RIL, 1, extractHerit)/rbind(hm$sigma, hm$sigma))
+dimnames(herit_height) = list(NULL, c("L", "NONE"))
+colMeans(herit_height)
+boxplot(herit_height)
+
+height_model = lmer(height ~ 1 + (0 + partner|RIL) + (1|block), data = arabi_data)
+summary(height_model)
+varRIL = diag(VarCorr(height_model)$RIL)
+varRep = rep(VarCorr(height_model)$block[1], 2)
+varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
+(h2 = varRIL/(varRIL + varRep + varRes))
