@@ -12,18 +12,23 @@ arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SI
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
-arabi_data = arabi_data[complete.cases(arabi_data),]
+arabi_data = arabi_data[complete.cases(arabi_data[,c("ID", "RIL", "block", "partner", "weight", "silique")]),]
 
 arabi_data = arabi_data[arabi_data$flower > 0,]
 arabi_data = arabi_data[arabi_data$height > 0,]
-arabi_data$weight <- scale(log(arabi_data$weight))
-arabi_data$height <- scale(arabi_data$height/10)
-mask_0 = arabi_data$silique == 0
-arabi_data$silique[!mask_0]  <- scale(log(arabi_data$silique[!mask_0]))
+
+arabi_data$weight <- sqrt(arabi_data$weight)
+arabi_data$silique  <- sqrt(arabi_data$silique)
+
+arabi_data$height <- scale(arabi_data$height)
+arabi_data$weight <- scale(arabi_data$weight)
+arabi_data$silique <- scale(arabi_data$silique)
+
+#mask_0 = arabi_data$silique == 0
+#arabi_data$silique[!mask_0]  <- scale(log(arabi_data$silique[!mask_0]))
 
 plot(silique~weight, arabi_data)
 plot(silique~height, arabi_data)
-table(arabi_data$flower)
 
 m_arabi_data = melt(arabi_data, id.vars = c('partner', 'block', 'ID', 'RIL'))
 ggplot(m_arabi_data, aes(x = value, color = partner)) +
@@ -84,9 +89,9 @@ herit <- data.frame(trait   = factor(rep(traits, 2), levels = traits),
                     lower   = herit[,2],
                     upper   = herit[,3], row.names = NULL)
 
-ggplot(herit, aes(trait, herit)) +
+ggplot(herit, aes(partner, herit)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
-theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~partner)
+theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y")
 
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
