@@ -18,9 +18,12 @@ arabi_data = arabi_data[complete.cases(arabi_data),]
 
 arabi_data = arabi_data[arabi_data$flower > 0,]
 arabi_data = arabi_data[arabi_data$height > 0,]
-arabi_data$weight <- scale(log(arabi_data$weight))
-arabi_data$weight <- scale(sqrt(arabi_data$weight))
-arabi_data$height <- scale(arabi_data$height)
+
+#arabi_data$weight <- scale(log(arabi_data$weight))
+#arabi_data$weight <- scale(sqrt(arabi_data$weight))
+arabi_data$weight <- sqrt(arabi_data$weight)
+
+
 mask_0 = arabi_data$silique == 0
 arabi_data$silique[!mask_0]  <- scale(log(arabi_data$silique[!mask_0]))
 
@@ -34,39 +37,8 @@ geom_histogram() + theme_classic() + theme(axis.text.x = element_text(angle = 90
 facet_wrap(~variable, ncol = 5, scale = "free")
 
 ###################
-## Branch
-###################
-
-lme4_model = glmer(branch ~ partner + (partner|RIL) + (1|block),
-                   family ="poisson", data = arabi_data)
-summary(lme4_model)
-
-traits = c('weight', 'height', 'silique', 'branch')
-names_g = paste0(traits, rep(c('D', 'S'), each = 4))
-
-branch_model = glmer2stan(branch ~ 1 + (partner|RIL) + (1|block),
-                          data=arabi_data,
-                          family="poisson"
-                          sample = FALSE, calcDIC = FALSE)
-write(branch_model$model, file = "branch.stan")
-
-branch_data <- list(N = dim(arabi_data)[1],
-                    branch = arabi_data$branch,
-                    partnerNONE = as.integer(as.factor(arabi_data$partner)),
-                    RIL = as.integer(as.factor(arabi_data$RIL)),
-                    N_RIL = length(unique(arabi_data$RIL)))
-branch_stan_model = stan(file = './branch.stan', data = branch_data, chain=1)
-bm = extract(branch_stan_model, permuted = TRUE)
-
-###################
 ## Silique
 ###################
-
-the_formula <- silique ~ 1 + (partner|RIL) + (1|block)
-silique_model = glmer2stan(the_formula, data=arabi_data,
-                           family="gaussian",
-                           sample = FALSE, calcDIC = FALSE)
-write(silique_model$model, file = "silique.stan")
 
 N           = dim(arabi_data)[1]
 silique     = arabi_data$silique
@@ -127,7 +99,7 @@ weight_model = glmer2stan(the_formula, data=arabi_data,
 write(weight_model$model, file = "weight.stan")
 
 N           = dim(arabi_data)[1]
-weight      = arabi_data$weight[,1]
+weight      = arabi_data$weight
 partnerNONE = as.integer(as.factor(arabi_data$partner)) - 1
 RIL         = as.integer(as.factor(arabi_data$RIL))
 block       = as.integer(as.factor(arabi_data$block))
@@ -166,7 +138,7 @@ dimnames(herit_weight) = list(NULL, c("L", "NONE"))
 colMeans(herit_weight)
 boxplot(herit_weight)
 
-weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (1|block), data = arabi_data)
+weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (1|block), data = arabi_data, REML = FALSE, na.action = 'na.omit')
 summary(weight_model)
 varRIL = diag(VarCorr(weight_model)$RIL)
 varRep = rep(VarCorr(weight_model)$block[1], 2)
