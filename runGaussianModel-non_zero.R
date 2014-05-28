@@ -9,7 +9,7 @@ library(gtools)
 library(MCMCglmm)
 
 raw_arabi_data <- read.csv2("./raw_data.csv")
-arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT)
+arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
@@ -66,7 +66,7 @@ arabi_model = MCMCglmm(cbind(weight_std, height_std, silique_std) ~ partner:trai
                        nitt = 103000, burnin = 3000, thin = 10,
                        prior = prior,
                        data = arabi_data)
-write.csv(arabi_data,"./data_clean.csv")
+summary(arabi_model)
 
 Gs = array(arabi_model$VCV[,grep("RIL", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, 2*num_traits, 2*num_traits))
 Bs = array(arabi_model$VCV[,grep("block", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, num_traits, num_traits))
@@ -99,7 +99,7 @@ summary(arabi_model)
 herit_plot = ggplot(herit, aes(partner, herit)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y")
-ggsave("~/Desktop/heritabilities_arabi.png", herit_plot)
+#ggsave("~/Desktop/heritabilities_arabi.png", herit_plot)
 
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
