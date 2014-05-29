@@ -14,11 +14,12 @@ raw_arabi_data <- read.csv("./data/data_clean_jason.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
+arabi_data$flower[is.na(arabi_data$flower)] <- 0
+arabi_data = arabi_data[complete.cases(arabi_data),]
+
 arabi_data$RIL = as.factor(arabi_data$RIL)
 arabi_data$block = as.factor(arabi_data$block)
 
-arabi_data$flower[is.na(arabi_data$flower)] <- 0
-arabi_data = arabi_data[complete.cases(arabi_data),]
 
 arabi_data = arabi_data[arabi_data$flower > 0,]
 arabi_data = arabi_data[arabi_data$height > 0,]
@@ -49,7 +50,6 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 ###################
 ## Silique
 ###################
-library(nlme)
 
 silique_model = lmer(silique ~ partner + (0 + partner|RIL) + (1|block),
                     data = arabi_data, na.action = 'na.omit')
@@ -68,10 +68,10 @@ varRes = rep(attributes(VarCorr(silique_model))$sc^2, 2)
 (h2 = varRIL/(varRIL + varRes + varRep))
 
 silique_model_D = lmer(silique_std ~ (1|RIL) + (1|block),
-                       data = filter(arabi_data, partner == "L"), na.action = 'na.omit')
+                       data = filter(arabi_data, partner == "L"))
 summary(silique_model_D)
 silique_model_S = lmer(silique_std ~ (1|RIL) + (1|block),
-                       data = filter(arabi_data, partner == "NONE"), na.action = 'na.omit')
+                       data = filter(arabi_data, partner == "NONE"))
 summary(silique_model_S)
 varRIL = c("D" = VarCorr(silique_model_D)$RIL, "S" = VarCorr(silique_model_S)$RIL)
 (h2 = varRIL)
