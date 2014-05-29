@@ -8,9 +8,12 @@ library(gridExtra)
 library(gtools)
 library(MCMCglmm)
 
-raw_arabi_data <- read.csv2("./raw_data.csv")
+raw_arabi_data <- read.csv2("./data/raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
+
+arabi_data$RIL = as.factor(arabi_data$RIL)
+arabi_data$block = as.factor(arabi_data$block)
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
 arabi_data = arabi_data[complete.cases(arabi_data),]
@@ -20,6 +23,7 @@ arabi_data = arabi_data[arabi_data$height > 0,]
 
 arabi_data$weight <- sqrt(arabi_data$weight)
 arabi_data$silique  <- sqrt(arabi_data$silique)
+arabi_data$branch  <- sqrt(arabi_data$branch)
 
 mask_partner = arabi_data$partner == "L"
 arabi_data$silique_std = arabi_data$silique
@@ -31,14 +35,17 @@ arabi_data$weight_std[!mask_partner] = scale(arabi_data$weight[!mask_partner])
 arabi_data$height_std = arabi_data$height
 arabi_data$height_std[ mask_partner] = scale(arabi_data$height[ mask_partner])
 arabi_data$height_std[!mask_partner] = scale(arabi_data$height[!mask_partner])
+arabi_data$branch_std = arabi_data$branch
+arabi_data$branch_std[ mask_partner] = scale(arabi_data$branch[ mask_partner])
+arabi_data$branch_std[!mask_partner] = scale(arabi_data$branch[!mask_partner])
 
 m_arabi_data = melt(arabi_data, id.vars = c('partner', 'block', 'ID', 'RIL'))
 ggplot(m_arabi_data, aes(x = value, color = partner)) +
 geom_histogram() + theme_classic() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
 facet_wrap(~variable, ncol = 5, scale = "free")
 
-traits = c('weight', 'height', 'silique')
-names_g = paste0(traits, rep(c('D', 'S'), each = 3))
+traits = c('weight', 'height', 'silique','branch')
+names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
 padRmatrix <- function(x) {
     R = array(0, c(2*num_traits, 2*num_traits))
     R[1:num_traits, 1:num_traits] = x[,1:num_traits]
@@ -52,12 +59,12 @@ padRmatrix <- function(x) {
 #############
 
 arabi_data$partner = factor(arabi_data$partner)
-num_traits = 3
+num_traits = 4
 prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
                       R2 = list(V = diag(num_traits), n = 0.002)),
              G = list(G1 = list(V = diag(2*num_traits) * 0.02, n = 2*num_traits+1),
                       G2 = list(V = diag(num_traits) * 0.02, n = num_traits+1)))
-arabi_model = MCMCglmm(cbind(weight_std, height_std, silique_std) ~ partner:trait - 1,
+arabi_model = MCMCglmm(cbind(weight_std, height_std, silique_std, branch_std) ~ partner:trait - 1,
                        random = ~us(trait:partner):RIL + us(trait):block,
                        rcov   = ~us(trait:at.level(partner, "L")):units +
                                  us(trait:at.level(partner, "NONE")):units,
@@ -90,7 +97,7 @@ names(sim_strains) = gsub('NONE', 'S', names(sim_strains))
 names(sim_strains) = gsub("([DS]):(.*)", "\\2\\1", names(sim_strains), perl=TRUE)
 herit = summary(arabi_model)$Gcovariances[seq(1, 4*num_traits*num_traits, 2*num_traits+1),1:3]
 herit <- data.frame(trait   = factor(rep(traits, 2), levels = traits),
-                    partner = factor(rep(c('D', 'S'), each  = 3), levels = c('S', 'D')),
+                    partner = factor(rep(c('D', 'S'), each  = num_traits), levels = c('S', 'D')),
                     herit   = herit[,1],
                     lower   = herit[,2],
                     upper   = herit[,3], row.names = NULL)
@@ -98,14 +105,14 @@ summary(arabi_model)
 
 herit_plot = ggplot(herit, aes(partner, herit)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
-theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y")
+theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
 #ggsave("~/Desktop/heritabilities_arabi.png", herit_plot)
 
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
 cast_phen[cast_phen == 'NONE'] <- 'S'
 cast_phen[cast_phen == 'L']    <- 'D'
-m.data = melt(cast_phen, id.vars= c('partner', 'RIL', 'ID'))
+m.data = melt(cast_phen, id.vars= c('partner', 'RIL', 'ID', 'block'))
 cast_phen = dcast(m.data, RIL~partner+variable, mean)
 names(cast_phen) = gsub("([DS])_(.*)", "\\2\\1", names(cast_phen), perl=TRUE)
 

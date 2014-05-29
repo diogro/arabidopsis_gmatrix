@@ -6,4 +6,5 @@ figures/*
 *.csv
 *.xls
 *.xlsx
-./data/*
+data/*
+*.sas
