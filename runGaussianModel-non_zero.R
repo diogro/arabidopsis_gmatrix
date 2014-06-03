@@ -12,7 +12,7 @@ raw_arabi_data <- read.csv2("./data/raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
-arabi_data$RIL = as.factor(arabi_data$RIL)
+arabi_data$RIL   = as.factor(arabi_data$RIL)
 arabi_data$block = as.factor(arabi_data$block)
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
@@ -21,8 +21,8 @@ arabi_data = arabi_data[complete.cases(arabi_data),]
 arabi_data = arabi_data[arabi_data$flower > 0,]
 arabi_data = arabi_data[arabi_data$height > 0,]
 
-arabi_data$weight <- sqrt(arabi_data$weight)
-arabi_data$silique  <- sqrt(arabi_data$silique)
+arabi_data$weight  <- sqrt(arabi_data$weight)
+arabi_data$silique <- sqrt(arabi_data$silique)
 arabi_data$branch  <- sqrt(arabi_data$branch)
 
 mask_partner = arabi_data$partner == "L"
@@ -45,6 +45,7 @@ geom_histogram() + theme_classic() + theme(axis.text.x = element_text(angle = 90
 facet_wrap(~variable, ncol = 5, scale = "free")
 
 traits = c('weight', 'height', 'silique','branch')
+num_traits = length(traits)
 names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
 padRmatrix <- function(x) {
     R = array(0, c(2*num_traits, 2*num_traits))
@@ -59,7 +60,6 @@ padRmatrix <- function(x) {
 #############
 
 arabi_data$partner = factor(arabi_data$partner)
-num_traits = 4
 prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
                       R2 = list(V = diag(num_traits), n = 0.002)),
              G = list(G1 = list(V = diag(2*num_traits) * 0.02, n = 2*num_traits+1),
@@ -73,7 +73,6 @@ arabi_model = MCMCglmm(cbind(weight_std, height_std, silique_std, branch_std) ~ 
                        nitt = 103000, burnin = 3000, thin = 10,
                        prior = prior,
                        data = arabi_data)
-summary(arabi_model)
 
 Gs = array(arabi_model$VCV[,grep("RIL", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, 2*num_traits, 2*num_traits))
 Bs = array(arabi_model$VCV[,grep("block", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, num_traits, num_traits))
