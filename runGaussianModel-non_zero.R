@@ -112,16 +112,22 @@ geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
 ggsave("~/Desktop/heritabilities_arabi.png", herit_plot)
 
-genetic_correlations = function(corr_G){
-    corr_D = lowerTriangle(corr_G[1:num_traits, 1:num_traits])
-    corr_S = lowerTriangle(corr_G[(num_traits+1):(2*num_traits), (num_traits+1):(2*num_traits)])
-    traits_comb = c('weight_height', 'weight_silique', 'silique_height')
-    data.frame(value = c(corr_D, corr_S), trait  = traits_comb, partner = rep(c('D', 'S'), each = 3))
-}
-gen_corrs = adply(corr_Gs, 1, genetic_correlations)
+gen_corrs = rbind(find_CI(corr_Gs[,2,1]),
+                  find_CI(corr_Gs[,3,1]),
+                  find_CI(corr_Gs[,3,2]),
+                  find_CI(corr_Gs[,5,4]),
+                  find_CI(corr_Gs[,6,4]),
+                  find_CI(corr_Gs[,6,5]))
+gen_corrs = data.frame(value = rowMeans(gen_corrs),
+                       lower = gen_corrs[,1],
+                       upper = gen_corrs[,2],
+                       trait = c('weight_height', 'weight_silique', 'silique_height'),
+                       partner = factor(rep(c('D', 'S'), each = num_traits), levels = c('S', 'D')))
 gen_corrs_plot = ggplot(gen_corrs, aes(partner, value)) +
-geom_boxplot() +
+geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'genetic correlations', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
+ggsave("~/Desktop/genetic_correlations_arabi.png", gen_corrs_plot)
+
 
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
