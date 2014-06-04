@@ -8,6 +8,22 @@ library(gridExtra)
 library(gtools)
 library(MCMCglmm)
 
+find_CI = function(x, prob = 0.95){
+    n = length(x)
+    xs = sort(x)
+    nint = floor(prob*n)
+    lowest_int = abs(xs[n] - xs[1])
+    #print(lowest_int)
+    for(i in 1:(n-nint)){
+        current_int = abs(xs[i] - xs[i+nint])
+        if(current_int <= lowest_int){
+            lowest_int = current_int
+            pos = i
+        }
+    }
+    return(c(xs[pos], xs[pos+nint]))
+}
+
 raw_arabi_data <- read.csv2("./data/raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
@@ -151,6 +167,6 @@ for(i in names(sim_strains)[-1]){
 }
 names(plots) = names(sim_strains)[-1]
 names(plots[[4]])
-tiff("~/Desktop/simulated_arabiopsis.tiff", heigh = 720, width = 1080)
+png("~/Desktop/simulated_arabiopsis.png", heigh = 720, width = 1080)
 grid.arrange(plots[[1]][[2]], plots[[1]][[4]], plots[[3]][[4]], plots[[2]][[3]], plots[[2]][[5]], plots[[4]][[5]], ncol = 3)
 dev.off()
