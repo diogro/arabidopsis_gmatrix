@@ -1,13 +1,10 @@
-if(!require(ggplot2)){install.packages("ggplot2"); library(ggplot2)}
-if(!require(reshape2)){install.packages("reshape2"); library(reshape2)}
-if(!require(plyr)){install.packages("plyr"); library(plyr)}
-if(!require(dplyr)){install.packages("dplyr"); library(dplyr)}
-#if(!require(lme4)){install.packages("lme4"); library(lme4)}
-#if(!require(rstan)){install.packages("rstan"); library(rstan)}
-if(!require(gridExtra)){install.packages("gridExtra"); library(gridExtra)}
-#if(!require(gtools)){install.packages("gtools"); library(gtools)}
-if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
-if(!require(mvtnorm)){install.packages("mvtnorm"); library(mvtnorm)}
+if(!require(ggplot2))   { install.packages("ggplot2")   ; library(ggplot2)   }
+if(!require(reshape2))  { install.packages("reshape2")  ; library(reshape2)  }
+if(!require(plyr))      { install.packages("plyr")      ; library(plyr)      }
+if(!require(dplyr))     { install.packages("dplyr")     ; library(dplyr)     }
+if(!require(gridExtra)) { install.packages("gridExtra") ; library(gridExtra) }
+if(!require(MCMCglmm))  { install.packages("MCMCglmm")  ; library(MCMCglmm)  }
+if(!require(mvtnorm))   { install.packages("mvtnorm")   ; library(mvtnorm)   }
 
 #################################
 # Functions and definitions
