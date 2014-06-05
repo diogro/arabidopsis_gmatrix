@@ -1,31 +1,48 @@
-library(ggplot2)
-library(reshape2)
-library(plyr)
-library(dplyr)
-library(lme4)
-library(rstan)
-library(gridExtra)
-library(gtools)
-library(glmer2stan)
-library(MCMCglmm)
+if(!require(ggplot2)){install.packages("ggplot2"); library(ggplot2)}
+if(!require(reshape2)){install.packages("reshape2"); library(reshape2)}
+if(!require(dplyr)){install.packages("dplyr"); library(dplyr)}
+if(!require(lme4)){install.packages("lme4"); library(lme4)}
 
-#raw_arabi_data <- read.csv2("./raw_data.csv")
-raw_arabi_data <- read.csv("./data/data_clean_jason.csv")
-arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT)
+#################################
+# Functions and definitions
+#################################
+
+#traits = c('weight', 'height', 'silique','branch')
+traits = c('weight', 'height', 'silique')
+num_traits = length(traits)
+
+#################################
+# reading data
+#################################
+
+raw_arabi_data <- read.csv2("./data/raw_data.csv")
+arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
+
+#####################################
+# Removing missing and weird zeros
+#####################################
 
 arabi_data$flower[is.na(arabi_data$flower)] <- 0
 arabi_data = arabi_data[complete.cases(arabi_data),]
 
-arabi_data$RIL = as.factor(arabi_data$RIL)
-arabi_data$block = as.factor(arabi_data$block)
-
-
 arabi_data = arabi_data[arabi_data$flower > 0,]
 arabi_data = arabi_data[arabi_data$height > 0,]
 
-arabi_data$weight <- sqrt(arabi_data$weight)
-arabi_data$silique  <- sqrt(arabi_data$silique)
+#####################################
+# Factors and data transformations
+#####################################
+
+arabi_data$RIL   = as.factor(arabi_data$RIL)
+arabi_data$block = as.factor(arabi_data$block)
+
+arabi_data$weight  <- sqrt(arabi_data$weight)
+arabi_data$silique <- sqrt(arabi_data$silique)
+arabi_data$branch  <- sqrt(arabi_data$branch)
+
+##########################################
+# Scaling for heritabilitie estimations
+##########################################
 
 mask_partner = arabi_data$partner == "L"
 arabi_data$silique_std = arabi_data$silique
@@ -37,9 +54,13 @@ arabi_data$weight_std[!mask_partner] = scale(arabi_data$weight[!mask_partner])
 arabi_data$height_std = arabi_data$height
 arabi_data$height_std[ mask_partner] = scale(arabi_data$height[ mask_partner])
 arabi_data$height_std[!mask_partner] = scale(arabi_data$height[!mask_partner])
+arabi_data$branch_std = arabi_data$branch
+arabi_data$branch_std[ mask_partner] = scale(arabi_data$branch[ mask_partner])
+arabi_data$branch_std[!mask_partner] = scale(arabi_data$branch[!mask_partner])
 
-#mask_0 = arabi_data$silique == 0 | is.na(arabi_data$silique)
-#arabi_data$silique[!mask_0]  <- scale(sqrt(arabi_data$silique[!mask_0]))
+#####################
+# Sanity check plot
+#####################
 
 m_arabi_data = melt(arabi_data, id.vars = c('partner', 'block', 'ID', 'RIL'))
 ggplot(m_arabi_data, aes(x = value, color = partner)) +
@@ -80,7 +101,7 @@ varRIL = c("D" = VarCorr(silique_model_D)$RIL, "S" = VarCorr(silique_model_S)$RI
 ## Weight
 ###################
 
-weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (0 + 1|block),
+weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (1|block),
                     data = arabi_data, REML = FALSE, na.action = 'na.omit')
 summary(weight_model)
 varRIL = diag(VarCorr(weight_model)$RIL)
@@ -98,24 +119,27 @@ varRIL = diag(VarCorr(weight_model)$RIL)
 ## Height
 ###################
 
-height_model = lmer(height ~ partner + (0 + partner|RIL),
+height_model = lmer(height ~ partner + (0 + partner|RIL) + (1|block),
                     data = arabi_data, REML = FALSE, na.action = 'na.omit')
 summary(height_model)
 varRIL = diag(VarCorr(height_model)$RIL)
 varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
 (h2 = varRIL/(varRIL + varRep + varRes))
 
-height_model = lmer(height_std ~ partner + (0 + partner|RIL),
+height_model = lmer(height_std ~ partner + (0 + partner|RIL) + (1|block),
                     data = arabi_data, REML = FALSE, na.action = 'na.omit')
 summary(height_model)
 varRIL = diag(VarCorr(height_model)$RIL)
 varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
 (h2 = varRIL)
 
-m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
-m_arabi_data$trait_partner = paste0(m_arabi_data$partner, m_arabi_data$variable)
-multi_model = lmer(value ~ trait_partner + (0 + trait_partner|RIL) + (0 + trait_partner|block),
-                   data = m_arabi_data, REML = FALSE, na.action = 'na.omit')
+m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
+ggplot(m_arabi_data, aes(x = value, color = partner)) +
+geom_histogram() + theme_classic() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+facet_wrap(~variable, ncol = 5, scale = "free")
+
+multi_model = lmer(value ~ variable*partner + (0 + variable:partner|RIL) + (variable|block),
+                   data = m_arabi_data, REML = FALSE, na.action = 'na.omit', control=lmerControl(check.conv.singular="warning"))
 summary(multi_model)
 VarCorr(multi_model)
 
