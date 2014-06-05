@@ -118,6 +118,7 @@ dimnames(arabi_model$Sol)[[2]] = gsub('partner', '', dimnames(arabi_model$Sol)[[
 dimnames(arabi_model$Sol)[[2]] = gsub('L', 'D', dimnames(arabi_model$Sol)[[2]])
 dimnames(arabi_model$Sol)[[2]] = gsub('NONE', 'S', dimnames(arabi_model$Sol)[[2]])
 dimnames(arabi_model$Sol)[[2]] = gsub("([DS]):(.*)", "\\2\\1", dimnames(arabi_model$Sol)[[2]], perl=TRUE)
+dimnames(arabi_model$Sol)[[2]] = gsub(":", "", dimnames(arabi_model$Sol)[[2]], perl=TRUE)
 
 #####################################
 # Extracting variance components
@@ -154,7 +155,7 @@ herit <- data.frame(trait   = factor(rep(traits, 2), levels = traits),
 herit_plot = ggplot(herit, aes(partner, herit)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
-#ggsave("~/Desktop/heritabilities_arabi.png", herit_plot)
+ggsave("./figures/heritabilities_arabi.png", herit_plot)
 
 ######################
 # Genetic Correlations
@@ -174,7 +175,7 @@ gen_corrs = data.frame(value = rowMeans(gen_corrs),
 gen_corrs_plot = ggplot(gen_corrs, aes(partner, value)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'genetic correlations', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
-#ggsave("~/Desktop/genetic_correlations_arabi.png", gen_corrs_plot)
+ggsave("./figures/genetic_correlations_arabi.png", gen_corrs_plot)
 
 ######################
 # Poterior checks
@@ -202,7 +203,7 @@ for(index in 1:n_rep){
                               rmvnorm(1, sigma = Rs[index,,])
     }
 }
-dimnames(sim_array) = list(1:n_rep, 1:N, traits_std)
+dimnames(sim_array) = list(NULL, NULL, traits_std)
 
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
@@ -226,16 +227,13 @@ for(i in names(sim_strains)){
     names(plots[[i]]) = names(sim_strains)[names(sim_strains) != i]
 }
 names(plots) = names(sim_strains)
-names(plots[[1]])
-names(plots[[2]])
-names(plots[[3]])
-names(plots[[4]])
-#png("~/Desktop/simulated_arabiopsis.png", heigh = 720, width = 1080)
+png("./figures/simulated_arabiopsis.png", heigh = 720, width = 1080)
 grid.arrange(plots[['weight_stdD']][['height_stdD']], plots[['weight_stdD']][['silique_stdD']], plots[['height_stdD']][['silique_stdD']],
              plots[['weight_stdS']][['height_stdS']], plots[['weight_stdS']][['silique_stdS']], plots[['height_stdS']][['silique_stdS']], ncol = 3)
-#dev.off()
+dev.off()
+png("./figures/simulated_arabiopsis_between.png", heigh = 720, width = 1080)
 grid.arrange(plots[['weight_stdD']][['weight_stdS']], plots[['height_stdD']][['height_stdS']], plots[['silique_stdD']][['silique_stdS']], ncol = 3)
-
+dev.off()
 
 checkStat = function(stat, title = ''){
     obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
