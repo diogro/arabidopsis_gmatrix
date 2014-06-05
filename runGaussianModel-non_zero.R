@@ -212,7 +212,7 @@ cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
 cast_phen[cast_phen == 'NONE'] <- 'S'
 cast_phen[cast_phen == 'L']    <- 'D'
 m.data = melt(cast_phen, id.vars= c('partner', 'RIL', 'ID', 'block'))
-cast_phen = dcast(m.data, RIL~partner+variable, mean)
+cast_phen = dcast(m.data, RIL+block~partner+variable, mean)
 names(cast_phen) = gsub("([DS])_(.*)", "\\2\\1", names(cast_phen), perl=TRUE)
 
 sim_strains = data.frame(sim_array[sample(1:n_rep, 1),,])
@@ -239,12 +239,13 @@ grid.arrange(plots[['weight_stdD']][['height_stdD']], plots[['weight_stdD']][['s
 #dev.off()
 
 
-obs_min = melt(sapply(cast_phen[traits_std], min, na.rm = T))
-obs_min$variable = rownames(obs_min)
-obs_max = melt(sapply(cast_phen[traits_std], max, na.rm = T))
-obs_max$variable = rownames(obs_max)
-sim_min = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), min)))
-sim_max = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), max)))
-
-ggplot(sim_min, aes(value)) + geom_histogram(binwidth = 0.1) + geom_vline(data = obs_min, aes(xintercept = value)) + facet_wrap(~variable)
-ggplot(sim_max, aes(value)) + geom_histogram(binwidth = 0.1) + geom_vline(data = obs_max, aes(xintercept = value)) + facet_wrap(~variable)
+checkStat = function(stat, title = ''){
+    obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
+    obs_stat$variable = rownames(obs_stat)
+    sim_stat = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), stat)))
+    ggplot(sim_stat, aes(value)) + geom_histogram() + geom_vline(data = obs_stat, aes(xintercept = value)) + facet_wrap(~variable) + ggtitle(title)
+}
+checkStat(min, "min")
+checkStat(max, "max")
+checkStat(mean, "mean")
+checkStat(sd, "sd")
