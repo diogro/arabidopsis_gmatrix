@@ -112,27 +112,28 @@ prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
 model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ trait:partner - 1")
 arabi_model = MCMCglmm(as.formula(model_formula),
                        random = ~us(trait:partner):RIL + us(trait):block,
-                       rcov   = ~us(trait:at.level(partner, "L")):RIL:units +
-                                 us(trait:at.level(partner, "NONE")):RIL:units,
+                       rcov   = ~us(trait:at.level(partner, "L"   )):units +
+                                 us(trait:at.level(partner, "NONE")):units,
                        family = rep("gaussian", num_traits),
                        verbose = TRUE,
                        nitt = 103000, burnin = 3000, thin = 10,
                        prior = prior,
                        data = arabi_data)
-dimnames(arabi_model$Sol)[[2]] = gsub('trait', '', dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub('partner', '', dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub('L', 'D', dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub('NONE', 'S', dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub("([DS]):(.*)", "\\2\\1", dimnames(arabi_model$Sol)[[2]], perl=TRUE)
-dimnames(arabi_model$Sol)[[2]] = gsub(":", "", dimnames(arabi_model$Sol)[[2]], perl=TRUE)
+dimnames(arabi_model$Sol)[[2]] = gsub('trait'       , ''       , dimnames(arabi_model$Sol)[[2]])
+dimnames(arabi_model$Sol)[[2]] = gsub('partner'     , ''       , dimnames(arabi_model$Sol)[[2]])
+dimnames(arabi_model$Sol)[[2]] = gsub('L'           , 'D'      , dimnames(arabi_model$Sol)[[2]])
+dimnames(arabi_model$Sol)[[2]] = gsub('NONE'        , 'S'      , dimnames(arabi_model$Sol)[[2]])
+dimnames(arabi_model$Sol)[[2]] = gsub("([DS]):(.*)" , "\\2\\1" , dimnames(arabi_model$Sol)[[2]], perl=TRUE)
+dimnames(arabi_model$Sol)[[2]] = gsub(":"           , ""       , dimnames(arabi_model$Sol)[[2]])
+summary(arabi_model)
 
 #####################################
 # Extracting variance components
 #####################################
 
-Gs = array(arabi_model$VCV[,grep("RIL", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, 2*num_traits, 2*num_traits))
-Bs = array(arabi_model$VCV[,grep("block", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, num_traits, num_traits))
-Rs = array(arabi_model$VCV[,grep("at.level", dimnames(arabi_model$VCV)[[2]])], dim = c(10000, num_traits, 2*num_traits))
+Gs = array(arabi_model$VCV[, grep("RIL"     , dimnames(arabi_model$VCV)[[2]])], dim = c(10000, 2*num_traits, 2*num_traits))
+Bs = array(arabi_model$VCV[, grep("block"   , dimnames(arabi_model$VCV)[[2]])], dim = c(10000,   num_traits,   num_traits))
+Rs = array(arabi_model$VCV[, grep("at.level", dimnames(arabi_model$VCV)[[2]])], dim = c(10000,   num_traits, 2*num_traits))
 Rs = aaply(Rs, 1, padRmatrix)
 corr_Gs = aaply(Gs, 1, cov2cor)
 corr_Rs = aaply(Rs, 1, cov2cor)
@@ -141,12 +142,11 @@ B_mcmc = apply(Bs, 2:3, mean)
 R_mcmc = apply(Rs, 2:3, mean)
 corr_G = apply(corr_Gs, 2:3, mean)
 corr_R = apply(corr_Rs, 2:3, mean)
-G_mcmc_conf = apply(Gs, 2:3, quantile, c(0.025, 0.975))
+G_mcmc_conf = apply(Gs, 2:3, find_CI)
 G_mcmc_conf = aperm(G_mcmc_conf, c(2, 3, 1))
 containsZero = function(x) ifelse(0 > x[1] & 0 < x[2], TRUE, FALSE)
 significant = !aaply(G_mcmc_conf, 1:2, containsZero)
 dimnames(G_mcmc) = dimnames(R_mcmc) = dimnames(corr_Rs)[2:3] = dimnames(corr_Gs)[2:3] = dimnames(G_mcmc_conf)[1:2] = dimnames(corr_R) = dimnames(corr_G) = list(names_g, names_g)
-summary(arabi_model)
 
 ######################
 # Heritabilities
