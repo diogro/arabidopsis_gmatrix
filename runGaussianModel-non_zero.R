@@ -146,13 +146,18 @@ summary(arabi_model)
 # Heritabilities
 ######################
 
-herit = summary(arabi_model)$Gcovariances[seq(1, 4*num_traits*num_traits, 2*num_traits+1),1:3]
-herit <- data.frame(trait   = factor(rep(traits, 2), levels = traits),
-                    partner = factor(rep(c('D', 'S'), each  = num_traits), levels = c('S', 'D')),
-                    herit   = herit[,1],
-                    lower   = herit[,2],
-                    upper   = herit[,3], row.names = NULL)
-herit_plot = ggplot(herit, aes(partner, herit)) +
+herit = rbind(find_CI(Gs[,1,1]),
+              find_CI(Gs[,2,2]),
+              find_CI(Gs[,3,3]),
+              find_CI(Gs[,4,4]),
+              find_CI(Gs[,5,5]),
+              find_CI(Gs[,6,6]))
+herit = data.frame(value = rowMeans(herit),
+                   lower = herit[,1],
+                   upper = herit[,2],
+                   trait = factor(rep(c('weight', 'heigh', 'silique'), 2), levels = c('weight', 'heigh', 'silique')),
+                   partner = factor(rep(c('D', 'S'), each = num_traits), levels = c('S', 'D')))
+herit_plot = ggplot(herit, aes(partner, value)) +
 geom_point() + geom_errorbar(aes(ymin=lower, ymax = upper)) +
 theme_classic(base_size = 15) + labs(y = 'heritabilities', x = 'trait') + facet_wrap(~trait, scale="free_y", nrow = 1)
 ggsave("./figures/heritabilities_arabi.png", herit_plot)
@@ -190,17 +195,18 @@ RIL_vector = as.numeric(arabi_data$RIL)
 block_vector = as.numeric(arabi_data$block)
 sim_array = array(0, dim = c(n_rep, N, 2*num_traits))
 for(index in 1:n_rep){
+    thin = 10000/n_rep
     RIL_effect = array(0, dim = c(n_RIL, 2*num_traits))
     block_effect = array(0, dim = c(n_block, num_traits))
     for(RIL in unique(RIL_vector))
-        RIL_effect[RIL,] = rmvnorm(1, sigma = Gs[index,,])
+        RIL_effect[RIL,] = rmvnorm(1, sigma = Gs[thin*index,,])
     for(block in unique(block_vector))
-        block_effect[block,] = rmvnorm(1, sigma = Bs[index,,])
+        block_effect[block,] = rmvnorm(1, sigma = Bs[thin*index,,])
     for(i in 1:N){
-        sim_array[index,i,] = arabi_model$Sol[index, traits_std] +
+        sim_array[index,i,] = arabi_model$Sol[thin*index, traits_std] +
                               RIL_effect[RIL_vector[i],] +
                               rep(block_effect[block_vector[i]], 2) +
-                              rmvnorm(1, sigma = Rs[index,,])
+                              rmvnorm(1, sigma = Rs[thin*index,,])
     }
 }
 dimnames(sim_array) = list(NULL, NULL, traits_std)
