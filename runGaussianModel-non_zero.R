@@ -37,6 +37,12 @@ find_CI = function(x, prob = 0.95){
     }
     return(c(xs[pos], xs[pos+nint]))
 }
+checkStat = function(stat, title = ''){
+    obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
+    obs_stat$variable = rownames(obs_stat)
+    sim_stat = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), stat)))
+    ggplot(sim_stat, aes(value)) + geom_histogram() + geom_vline(data = obs_stat, aes(xintercept = value)) + facet_wrap(~variable) + ggtitle(title)
+}
 
 #################################
 # reading data
@@ -241,13 +247,7 @@ png("./figures/simulated_arabiopsis_between.png", heigh = 720, width = 1080)
 grid.arrange(plots[['weight_stdD']][['weight_stdS']], plots[['height_stdD']][['height_stdS']], plots[['silique_stdD']][['silique_stdS']], ncol = 3)
 dev.off()
 
-checkStat = function(stat, title = ''){
-    obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
-    obs_stat$variable = rownames(obs_stat)
-    sim_stat = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), stat)))
-    ggplot(sim_stat, aes(value)) + geom_histogram() + geom_vline(data = obs_stat, aes(xintercept = value)) + facet_wrap(~variable) + ggtitle(title)
-}
-checkStat(min, "min")
-checkStat(max, "max")
-checkStat(mean, "mean")
-checkStat(sd, "sd")
+checkStat(min  , "min")
+checkStat(max  , "max")
+checkStat(mean , "mean")
+checkStat(sd   , "sd")
