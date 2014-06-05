@@ -106,7 +106,7 @@ prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
                       R2 = list(V = diag(num_traits), n = 0.002)),
              G = list(G1 = list(V = diag(2*num_traits) * 0.002, n = 2*num_traits + 1),
                       G2 = list(V = diag(num_traits) * 0.002, n = num_traits + 1)))
-model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ partner:trait - 1")
+model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ trait:partner - 1")
 arabi_model = MCMCglmm(as.formula(model_formula),
                        random = ~us(trait:partner):RIL + us(trait):block,
                        rcov   = ~us(trait:at.level(partner, "L")):RIL:units +
@@ -237,6 +237,7 @@ names(plots[[4]])
 grid.arrange(plots[['weight_stdD']][['height_stdD']], plots[['weight_stdD']][['silique_stdD']], plots[['height_stdD']][['silique_stdD']],
              plots[['weight_stdS']][['height_stdS']], plots[['weight_stdS']][['silique_stdS']], plots[['height_stdS']][['silique_stdS']], ncol = 3)
 #dev.off()
+grid.arrange(plots[['weight_stdD']][['weight_stdS']], plots[['height_stdD']][['height_stdS']], plots[['silique_stdD']][['silique_stdS']], ncol = 3)
 
 
 checkStat = function(stat, title = ''){
