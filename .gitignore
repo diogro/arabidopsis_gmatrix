@@ -1,0 +1,10 @@
+figures/*
+.Rproj.user
+.Rhistory
+*.RData
+*.Rdata
+*.csv
+*.xls
+*.xlsx
+data/*
+*.sas
