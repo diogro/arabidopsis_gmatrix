@@ -15,35 +15,6 @@ traits = c('weight', 'height', 'silique')
 num_traits = length(traits)
 names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
 
-padRmatrix = function(x) {          # create square residual matrix
-    R = array(0, c(2*num_traits, 2*num_traits))
-    R[1:num_traits, 1:num_traits] = x[,1:num_traits]
-    R[(num_traits+1):(2*num_traits), (num_traits+1):(2*num_traits)] = x[,(num_traits+1):(2*num_traits)]
-    dimnames(R) = list(names_g, names_g)
-    return(R)
-}
-find_CI = function(x, prob = 0.95){  # create credible intervals
-    n = length(x)
-    xs = sort(x)
-    nint = floor(prob*n)
-    lowest_int = abs(xs[n] - xs[1])
-    #print(lowest_int)
-    for(i in 1:(n-nint)){
-        current_int = abs(xs[i] - xs[i+nint])
-        if(current_int <= lowest_int){
-            lowest_int = current_int
-            pos = i
-        }
-    }
-    return(c(xs[pos], xs[pos+nint]))
-}
-checkStat = function(stat, title = ''){ # simple posterior checks
-    obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
-    obs_stat$variable = rownames(obs_stat)
-    sim_stat = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), stat)))
-    ggplot(sim_stat, aes(value)) + geom_histogram() + geom_vline(data = obs_stat, aes(xintercept = value)) + facet_wrap(~variable) + ggtitle(title)
-}
-
 #################################
 # reading data
 #################################
@@ -107,77 +78,4 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 ##########################
 # Multivariate Model
 ##########################
-
-#m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
-m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
-multi_model = lmer(value ~ variable*partner*block + (0 + variable:partner|RIL),
-                   data = m_arabi_data, REML = FALSE, na.action = 'na.omit', control=lmerControl(check.conv.singular="warning"))
-summary(multi_model)
-VarCorr(multi_model)
-VarCorr(multi_model)$RIL
-
-
-
-###################
-## Silique
-###################
-
-silique_model = lmer(silique ~ partner*block + (0 + partner|RIL),
-                    data = arabi_data, na.action = 'na.omit')
-summary(silique_model)
-varRIL = diag(VarCorr(silique_model)$RIL)
-varRes = rep(attributes(VarCorr(silique_model))$sc^2, 2)
-(h2 = varRIL/(varRIL + varRes))
-
-silique_model = lmer(silique_std ~ partner*block + (0 + partner|RIL),
-                     data = arabi_data, na.action = 'na.omit')
-summary(silique_model)
-varRIL = diag(VarCorr(silique_model)$RIL)
-varRes = rep(attributes(VarCorr(silique_model))$sc^2, 2)
-(h2 = varRIL/(varRIL + varRes))
-
-silique_model_D = lmer(silique_std ~ block + (1|RIL),
-                       data = filter(arabi_data, partner == "D"))
-summary(silique_model_D)
-silique_model_S = lmer(silique_std ~ block + (1|RIL),
-                       data = filter(arabi_data, partner == "S"))
-summary(silique_model_S)
-varRIL = c("D" = VarCorr(silique_model_D)$RIL, "S" = VarCorr(silique_model_S)$RIL)
-(h2 = varRIL)
-
-###################
-## Weight
-###################
-
-weight_model = lmer(weight ~ 1 + (0 + partner|RIL) + (1|block),
-                    data = arabi_data, REML = FALSE, na.action = 'na.omit')
-summary(weight_model)
-varRIL = diag(VarCorr(weight_model)$RIL)
-varRep = rep(VarCorr(weight_model)$block[1], 2)
-varRes = rep(attributes(VarCorr(weight_model))$sc^2, 2)
-(h2 = varRIL/(varRIL + varRep + varRes))
-
-weight_model = lmer(weight_std ~ 1 + (0 + partner|RIL) + (1|block),
-                    data = arabi_data, REML = FALSE, na.action = 'na.omit')
-summary(weight_model)
-varRIL = diag(VarCorr(weight_model)$RIL)
-(h2 = varRIL)
-
-###################
-## Height
-###################
-
-height_model = lmer(height ~ partner + (0 + partner|RIL) + (1|block),
-                    data = arabi_data, REML = FALSE, na.action = 'na.omit')
-summary(height_model)
-varRIL = diag(VarCorr(height_model)$RIL)
-varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
-(h2 = varRIL/(varRIL + varRep + varRes))
-
-height_model = lmer(height_std ~ partner + (0 + partner|RIL) + (1|block),
-                    data = arabi_data, REML = FALSE, na.action = 'na.omit')
-summary(height_model)
-varRIL = diag(VarCorr(height_model)$RIL)
-varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
-(h2 = varRIL)
 
