@@ -10,19 +10,22 @@ if(!require(mvtnorm))   { install.packages("mvtnorm")   ; library(mvtnorm)   }
 # Functions and definitions
 #################################
 
+dir.create(file.path("./figures"), showWarnings = FALSE)
+
 #traits = c('weight', 'height', 'silique','branch')
 traits = c('weight', 'height', 'silique')
 
 num_traits = length(traits)
 names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
-padRmatrix <- function(x) {
+
+padRmatrix = function(x) {          # create square residual matrix
     R = array(0, c(2*num_traits, 2*num_traits))
     R[1:num_traits, 1:num_traits] = x[,1:num_traits]
     R[(num_traits+1):(2*num_traits), (num_traits+1):(2*num_traits)] = x[,(num_traits+1):(2*num_traits)]
     dimnames(R) = list(names_g, names_g)
     return(R)
 }
-find_CI = function(x, prob = 0.95){
+find_CI = function(x, prob = 0.95){  # create credible intervals
     n = length(x)
     xs = sort(x)
     nint = floor(prob*n)
@@ -37,7 +40,7 @@ find_CI = function(x, prob = 0.95){
     }
     return(c(xs[pos], xs[pos+nint]))
 }
-checkStat = function(stat, title = ''){
+checkStat = function(stat, title = ''){ # simple posterior checks
     obs_stat = melt(sapply(cast_phen[traits_std], stat, na.rm = T))
     obs_stat$variable = rownames(obs_stat)
     sim_stat = melt(adply(sim_array, 1, function(x) sapply(data.frame(x), stat)))
@@ -48,15 +51,15 @@ checkStat = function(stat, title = ''){
 # reading data
 #################################
 
-raw_arabi_data <- read.csv2("./data/raw_data.csv")
-arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
-names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
+raw_arabi_data = read.csv2("./data/raw_data.csv", as.is = T)
+arabi_data = select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
+names(arabi_data) = c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
 #####################################
 # Removing missing and weird zeros
 #####################################
 
-arabi_data$flower[is.na(arabi_data$flower)] <- 0
+arabi_data$flower[is.na(arabi_data$flower)] = 0
 arabi_data = arabi_data[complete.cases(arabi_data),]
 
 arabi_data = arabi_data[arabi_data$flower > 0,]
@@ -66,18 +69,22 @@ arabi_data = arabi_data[arabi_data$height > 0,]
 # Factors and data transformations
 #####################################
 
-arabi_data$RIL   = as.factor(arabi_data$RIL)
-arabi_data$block = as.factor(arabi_data$block)
+arabi_data$RIL     = as.factor(arabi_data$RIL)
+arabi_data$block   = as.factor(arabi_data$block)
 
-arabi_data$weight  <- sqrt(arabi_data$weight)
-arabi_data$silique <- sqrt(arabi_data$silique)
-arabi_data$branch  <- sqrt(arabi_data$branch)
+arabi_data$partner[arabi_data$partner == 'NONE'] = 'S'
+arabi_data$partner[arabi_data$partner == 'L']    = 'D'
+arabi_data$partner = as.factor(arabi_data$partner)
+
+arabi_data$weight  = sqrt(arabi_data$weight)
+arabi_data$silique = sqrt(arabi_data$silique)
+arabi_data$branch  = sqrt(arabi_data$branch)
 
 ##########################################
-# Scaling for heritabilitie estimations
+# Scaling for heritability estimation
 ##########################################
 
-mask_partner = arabi_data$partner == "L"
+mask_partner = arabi_data$partner == "D"
 arabi_data$silique_std = arabi_data$silique
 arabi_data$silique_std[ mask_partner] = scale(arabi_data$silique[ mask_partner])
 arabi_data$silique_std[!mask_partner] = scale(arabi_data$silique[!mask_partner])
@@ -102,9 +109,8 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 
 ####################################
 # MCMCglmm with all non-zero traits
-###################################
+####################################
 
-arabi_data$partner = factor(arabi_data$partner)
 prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
                       R2 = list(V = diag(num_traits), n = 0.002)),
              G = list(G1 = list(V = diag(2*num_traits) * 0.002, n = 2*num_traits + 1),
@@ -112,8 +118,8 @@ prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
 model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ trait:partner - 1")
 arabi_model = MCMCglmm(as.formula(model_formula),
                        random = ~us(trait:partner):RIL + us(trait):block,
-                       rcov   = ~us(trait:at.level(partner, "L"   )):units +
-                                 us(trait:at.level(partner, "NONE")):units,
+                       rcov   = ~us(trait:at.level(partner, "D")):units +
+                                 us(trait:at.level(partner, "S")):units,
                        family = rep("gaussian", num_traits),
                        verbose = TRUE,
                        nitt = 103000, burnin = 3000, thin = 10,
@@ -121,11 +127,9 @@ arabi_model = MCMCglmm(as.formula(model_formula),
                        data = arabi_data)
 dimnames(arabi_model$Sol)[[2]] = gsub('trait'       , ''       , dimnames(arabi_model$Sol)[[2]])
 dimnames(arabi_model$Sol)[[2]] = gsub('partner'     , ''       , dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub('L'           , 'D'      , dimnames(arabi_model$Sol)[[2]])
-dimnames(arabi_model$Sol)[[2]] = gsub('NONE'        , 'S'      , dimnames(arabi_model$Sol)[[2]])
 dimnames(arabi_model$Sol)[[2]] = gsub("([DS]):(.*)" , "\\2\\1" , dimnames(arabi_model$Sol)[[2]], perl=TRUE)
 dimnames(arabi_model$Sol)[[2]] = gsub(":"           , ""       , dimnames(arabi_model$Sol)[[2]])
-summary(arabi_model)
+(summary(arabi_model))
 
 #####################################
 # Extracting variance components
@@ -217,10 +221,9 @@ for(index in 1:n_rep){
 }
 dimnames(sim_array) = list(NULL, NULL, traits_std)
 
+# wide format data for ploting
 cast_phen = arabi_data
 cast_phen$partner = as.character(levels(cast_phen$partner)[cast_phen$partner])
-cast_phen[cast_phen == 'NONE'] <- 'S'
-cast_phen[cast_phen == 'L']    <- 'D'
 m.data = melt(cast_phen, id.vars= c('partner', 'RIL', 'ID', 'block'))
 cast_phen = dcast(m.data, RIL+block~partner+variable, mean)
 names(cast_phen) = gsub("([DS])_(.*)", "\\2\\1", names(cast_phen), perl=TRUE)
