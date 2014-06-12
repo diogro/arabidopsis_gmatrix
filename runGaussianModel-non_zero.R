@@ -12,7 +12,7 @@ if(!require(mvtnorm))   { install.packages("mvtnorm")   ; library(mvtnorm)   }
 
 dir.create(file.path("./figures"), showWarnings = FALSE)
 #save.image("./mcmcimage.Rdata")
-load("./mcmcimage.Rdata")
+#load("./mcmcimage.Rdata")
 
 #traits = c('weight', 'height', 'silique','branch')
 traits = c('weight', 'height', 'silique')
@@ -53,7 +53,7 @@ checkStat = function(stat, title = ''){ # simple posterior checks
 # reading data
 #################################
 
-raw_arabi_data = read.csv2("./data/raw_data.csv", as.is = T)
+raw_arabi_data = read.csv2("~/Dropbox/Public/raw_data.csv", as.is = T)
 arabi_data = select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) = c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
