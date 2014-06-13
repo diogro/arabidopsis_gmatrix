@@ -53,7 +53,7 @@ checkStat = function(stat, title = ''){ # simple posterior checks
 # reading data
 #################################
 
-raw_arabi_data = read.csv2("./data/raw_data.csv", as.is = T)
+raw_arabi_data = read.csv2("http://dl.dropboxusercontent.com/u/891794/raw_data.csv", as.is = T)
 arabi_data = select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) = c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
@@ -123,7 +123,8 @@ arabi_model = MCMCglmm(as.formula(model_formula),
                                  us(trait:at.level(partner, "S")):units,
                        family = rep("gaussian", num_traits),
                        verbose = TRUE,
-                       nitt = 1030000, burnin = 30000, thin = 100,
+                       #nitt = 1030000, burnin = 30000, thin = 100, # Modelo bem melhor estimado, mas demora
+                       nitt = 10300, burnin = 300, thin = 10,       # Modelo rapido
                        prior = prior,
                        data = arabi_data)
 dimnames(arabi_model$Sol)[[2]] = gsub('trait'       , ''       , dimnames(arabi_model$Sol)[[2]])

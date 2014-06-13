@@ -1,7 +1,8 @@
 if(!require(ggplot2))  { install.packages("ggplot2")  ;  library(ggplot2)  }
 if(!require(reshape2)) { install.packages("reshape2") ;  library(reshape2) }
+if(!require(plyr))    { install.packages("dplyr")    ;  library(dplyr)    }
 if(!require(dplyr))    { install.packages("dplyr")    ;  library(dplyr)    }
-if(!require(lme4))     { install.packages("lme4")     ;  library(lme4)     }
+if(!require(nlme))     { install.packages("lme4")     ;  library(lme4)     }
 
 #################################
 # Functions and definitions
@@ -11,6 +12,7 @@ dir.create(file.path("./figures"), showWarnings = FALSE)
 
 #traits = c('weight', 'height', 'silique','branch')
 traits = c('weight', 'height', 'silique')
+traits_std = c('weight_std', 'height_std', 'silique_std')
 
 num_traits = length(traits)
 names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
@@ -79,3 +81,20 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 # Multivariate Model
 ##########################
 
+
+m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
+#m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
+multi_model <- lme(fixed  = value ~ variable + variable:partner + variable:block,
+                   random = ~ variable:partner|RIL,
+                   data   = m_arabi_data)
+summary(multi_model)
+
+trait = "silique"
+withinRILVar <- function(trait){
+    var_height = dlply(arabi_data, .(partner), function(d) anova(lm(d[[trait]]~d$RIL)))
+    sq_df = ldply(var_height, function(m) m$'Sum Sq'/m$Df)
+    sq_df
+}
+withinRILVar("weight_std")
+withinRILVar("height_std")
+withinRILVar("silique_std")

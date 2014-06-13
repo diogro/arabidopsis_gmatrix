@@ -19,7 +19,7 @@ names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
 # reading data
 #################################
 
-raw_arabi_data = read.csv2("./data/raw_data.csv", as.is = T)
+raw_arabi_data = read.csv2("http://dl.dropboxusercontent.com/u/891794/raw_data.csv", as.is = T)
 arabi_data = select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) = c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
@@ -39,9 +39,9 @@ arabi_data = arabi_data[arabi_data$height > 0,]
 
 arabi_data$RIL     = as.factor(arabi_data$RIL)
 arabi_data$block   = as.factor(arabi_data$block)
-
-arabi_data$partner[arabi_data$partner == 'NONE'] = 'S'
-arabi_data$partner[arabi_data$partner == 'L']    = 'D'
+                                                       # treatment:
+arabi_data$partner[arabi_data$partner == 'NONE'] = 'S' # singles
+arabi_data$partner[arabi_data$partner == 'L']    = 'D' # doubles
 arabi_data$partner = as.factor(arabi_data$partner)
 
 arabi_data$weight  = sqrt(arabi_data$weight)
@@ -79,6 +79,9 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 # Multivariate Model
 ##########################
 
+#Muito mau comportado e incoerente com os univariados. Suspeito que seja
+#falta de replicação dentro de linhagens
+
 m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
 #m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
 multi_model = lmer(value ~ variable + variable:partner + variable:block + (0 + variable:partner|RIL),
@@ -87,6 +90,10 @@ summary(multi_model)
 VarCorr(multi_model)
 VarCorr(multi_model)$RIL
 diag(VarCorr(multi_model)$RIL)
+
+##########################
+# Univariate Models
+##########################
 
 ###################
 ## Silique
