@@ -119,12 +119,12 @@ prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
 model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ trait:partner + trait:block - 1")
 arabi_model = MCMCglmm(as.formula(model_formula),
                        random = ~us(trait:partner):RIL,
-                       rcov   = ~us(trait:at.level(partner, "D")):units +
-                                 us(trait:at.level(partner, "S")):units,
+                       rcov   = ~us(trait:at.level(partner, "D")):RIL:units +
+                                 us(trait:at.level(partner, "S")):RIL:units,
                        family = rep("gaussian", num_traits),
                        verbose = TRUE,
-                       #nitt = 1030000, burnin = 30000, thin = 100, # Modelo bem melhor estimado, mas demora
-                       nitt = 10300, burnin = 300, thin = 10,       # Modelo rapido
+                       nitt = 1030000, burnin = 30000, thin = 100,  # Modelo bem melhor estimado, mas demora
+                       #nitt = 10300, burnin = 300, thin = 10,       # Modelo rapido
                        prior = prior,
                        data = arabi_data)
 dimnames(arabi_model$Sol)[[2]] = gsub('trait'       , ''       , dimnames(arabi_model$Sol)[[2]])
@@ -137,7 +137,7 @@ dimnames(arabi_model$Sol)[[2]] = gsub(":"           , ""       , dimnames(arabi_
 # Extracting variance components
 #####################################
 
-Gs = array(arabi_model$VCV[, grep("RIL"     , dimnames(arabi_model$VCV)[[2]])], dim = c(10000, 2*num_traits, 2*num_traits))
+Gs = array(arabi_model$VCV[, 1:(4*num_traits*num_traits)]                     , dim = c(10000, 2*num_traits, 2*num_traits))
 Rs = array(arabi_model$VCV[, grep("at.level", dimnames(arabi_model$VCV)[[2]])], dim = c(10000,   num_traits, 2*num_traits))
 Rs = aaply(Rs, 1, padRmatrix)
 corr_Gs = aaply(Gs, 1, cov2cor)

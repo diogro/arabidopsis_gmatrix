@@ -91,6 +91,23 @@ VarCorr(multi_model)
 VarCorr(multi_model)$RIL
 diag(VarCorr(multi_model)$RIL)
 
+table(arabi_data$RIL, arabi_data$partner)
+
+#############################
+# Multivariate Linear Model
+#############################
+
+m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
+#m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
+multi_model = lm(value ~ variable*partner*block*RIL,
+                 data = m_arabi_data, REML = FALSE, na.action = 'na.omit',)
+summary(multi_model)
+VarCorr(multi_model)
+VarCorr(multi_model)$RIL
+diag(VarCorr(multi_model)$RIL)
+
+table(arabi_data$RIL, arabi_data$partner)
+
 ##########################
 # Univariate Models
 ##########################
