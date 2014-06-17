@@ -82,6 +82,11 @@ arabi_data$weight  = sqrt(arabi_data$weight)
 arabi_data$silique = sqrt(arabi_data$silique)
 arabi_data$branch  = sqrt(arabi_data$branch)
 
+mask = apply(table(arabi_data$RIL, arabi_data$partner), 1, function(x) all(x > 1))[arabi_data$RIL]
+arabi_data = arabi_data[mask,]
+arabi_data$RIL = as.character(arabi_data$RIL)
+table(arabi_data$RIL, arabi_data$partner)
+
 ##########################################
 # Scaling for heritability estimation
 ##########################################
@@ -113,9 +118,9 @@ facet_wrap(~variable, ncol = 5, scale = "free")
 # MCMCglmm with all non-zero traits
 ####################################
 
-prior = list(R = list(R1 = list(V = diag(num_traits), n = 0.002),
-                      R2 = list(V = diag(num_traits), n = 0.002)),
-             G = list(G1 = list(V = diag(2*num_traits) * 0.002, n = 2*num_traits + 1)))
+prior = list(R = list(R1 = list(V = diag(num_traits),   n = 0.002),
+                      R2 = list(V = diag(num_traits),   n = 0.002)),
+             G = list(G1 = list(V = diag(2*num_traits), n = 0.002)))
 model_formula = paste0("cbind(",paste(paste0(traits, "_std"), collapse=','), ") ~ trait:partner + trait:block - 1")
 arabi_model = MCMCglmm(as.formula(model_formula),
                        random = ~us(trait:partner):RIL,
@@ -124,7 +129,7 @@ arabi_model = MCMCglmm(as.formula(model_formula),
                        family = rep("gaussian", num_traits),
                        verbose = TRUE,
                        nitt = 1030000, burnin = 30000, thin = 100,  # Modelo bem melhor estimado, mas demora
-                       #nitt = 10300, burnin = 300, thin = 10,       # Modelo rapido
+                       #nitt = 10300, burnin = 300, thin = 1,       # Modelo rapido
                        prior = prior,
                        data = arabi_data)
 dimnames(arabi_model$Sol)[[2]] = gsub('trait'       , ''       , dimnames(arabi_model$Sol)[[2]])
@@ -202,7 +207,7 @@ n_RIL = length(unique(arabi_data$RIL))
 n_block = length(unique(arabi_data$block))
 N = length(arabi_data$RIL)
 n_rep = 1000
-RIL_vector = as.numeric(arabi_data$RIL)
+RIL_vector = as.numeric(as.factor(arabi_data$RIL))
 block_vector = as.numeric(arabi_data$block)
 sim_array = array(0, dim = c(n_rep, N, 2*num_traits))
 for(index in 1:n_rep){
