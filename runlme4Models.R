@@ -121,7 +121,6 @@ silique_model = lmer(silique_std ~ partner + (0 + partner|RIL),
                      data = arabi_data, na.action = 'na.omit')
 summary(silique_model)
 varRIL = diag(VarCorr(silique_model)$RIL)
-varRes = rep(attributes(VarCorr(silique_model))$sc^2, 2)
 (h2 = varRIL)
 
 # scaled per treatment
@@ -180,7 +179,6 @@ height_model = lmer(height_std ~ partner + (0 + partner|RIL),
                     data = arabi_data, na.action = 'na.omit')
 summary(height_model)
 varRIL = diag(VarCorr(height_model)$RIL)
-varRes = rep(attributes(VarCorr(height_model))$sc^2, 2)
 (h2 = varRIL)
 
 # scaled per treatment
