@@ -19,7 +19,7 @@ names_g = paste0(traits, rep(c('D', 'S'), each = num_traits))
 # reading data
 #################################
 
-raw_arabi_data = read.csv2("http://dl.dropboxusercontent.com/u/891794/raw_data.csv", as.is = T)
+raw_arabi_data = read.csv2("~/Dropbox/Public/raw_data.csv", as.is = T)
 arabi_data = select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN, BOLT3)
 names(arabi_data) = c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch", "flower")
 
