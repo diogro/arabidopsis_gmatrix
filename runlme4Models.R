@@ -123,6 +123,16 @@ summary(silique_model)
 varRIL = diag(VarCorr(silique_model)$RIL)
 (h2 = varRIL)
 
+# un-scaled per treatment
+silique_model_D = lmer(silique ~ (1|RIL),
+                       data = filter(arabi_data, partner == "D"))
+summary(silique_model_D)
+silique_model_S = lmer(silique ~ (1|RIL),
+                       data = filter(arabi_data, partner == "S"))
+summary(silique_model_S)
+varRIL = c("D" = VarCorr(silique_model_D)$RIL, "S" = VarCorr(silique_model_S)$RIL)
+(h2 = varRIL)
+
 # scaled per treatment
 silique_model_D = lmer(silique_std ~ (1|RIL),
                        data = filter(arabi_data, partner == "D"))
@@ -152,6 +162,16 @@ summary(weight_model)
 varRIL = diag(VarCorr(weight_model)$RIL)
 (h2 = varRIL)
 
+# un-scaled per treatment
+weight_model_D = lmer(weight ~ (1|RIL),
+                       data = filter(arabi_data, partner == "D"))
+summary(weight_model_D)
+weight_model_S = lmer(weight ~ (1|RIL),
+                       data = filter(arabi_data, partner == "S"))
+summary(weight_model_S)
+varRIL = c("D" = VarCorr(weight_model_D)$RIL, "S" = VarCorr(weight_model_S)$RIL)
+(h2 = varRIL)
+
 # scaled per treatment
 weight_model_D = lmer(weight_std ~ (1|RIL),
                        data = filter(arabi_data, partner == "D"))
@@ -179,6 +199,16 @@ height_model = lmer(height_std ~ partner + (0 + partner|RIL),
                     data = arabi_data, na.action = 'na.omit')
 summary(height_model)
 varRIL = diag(VarCorr(height_model)$RIL)
+(h2 = varRIL)
+
+# un-scaled per treatment
+height_model_D = lmer(height ~ (1|RIL),
+                       data = filter(arabi_data, partner == "D"))
+summary(height_model_D)
+height_model_S = lmer(height ~ (1|RIL),
+                       data = filter(arabi_data, partner == "S"))
+summary(height_model_S)
+varRIL = c("D" = VarCorr(height_model_D)$RIL, "S" = VarCorr(height_model_S)$RIL)
 (h2 = varRIL)
 
 # scaled per treatment
