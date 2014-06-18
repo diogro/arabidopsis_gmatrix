@@ -52,7 +52,7 @@ arabi_data$branch  = sqrt(arabi_data$branch)
 # Removing RIL with no replication in both environments
 #################################################################
 
-mask = apply(table(arabi_data$RIL, arabi_data$partner), 1, function(x) all(x > 1))[arabi_data$RIL]
+mask = apply(table(arabi_data$RIL, arabi_data$partner), 1, function(x) any(x > 1))[arabi_data$RIL]
 arabi_data = arabi_data[mask,]
 arabi_data$RIL = as.character(arabi_data$RIL)
 table(arabi_data$RIL, arabi_data$partner)

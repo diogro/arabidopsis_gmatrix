@@ -82,7 +82,11 @@ arabi_data$weight  = sqrt(arabi_data$weight)
 arabi_data$silique = sqrt(arabi_data$silique)
 arabi_data$branch  = sqrt(arabi_data$branch)
 
-mask = apply(table(arabi_data$RIL, arabi_data$partner), 1, function(x) all(x > 1))[arabi_data$RIL]
+#################################################################
+# Removing RIL with no replication in both environments
+#################################################################
+
+mask = apply(table(arabi_data$RIL, arabi_data$partner), 1, function(x) any(x > 1))[arabi_data$RIL]
 arabi_data = arabi_data[mask,]
 arabi_data$RIL = as.character(arabi_data$RIL)
 table(arabi_data$RIL, arabi_data$partner)
@@ -250,7 +254,7 @@ png("./figures/simulated_arabidopsis.png", heigh = 720, width = 1080)
 grid.arrange(plots[['weight_stdD']][['height_stdD']], plots[['weight_stdD']][['silique_stdD']], plots[['height_stdD']][['silique_stdD']],
              plots[['weight_stdS']][['height_stdS']], plots[['weight_stdS']][['silique_stdS']], plots[['height_stdS']][['silique_stdS']], ncol = 3)
 dev.off()
-png("./figures/simulated_arabidopsis_between.png", heigh = 720, width = 1080)
+png("./figures/simulated_arabidopsis_between.png", heigh = 400, width = 1080)
 grid.arrange(plots[['weight_stdD']][['weight_stdS']], plots[['height_stdD']][['height_stdS']], plots[['silique_stdD']][['silique_stdS']], ncol = 3)
 dev.off()
 
