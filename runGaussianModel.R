@@ -7,7 +7,7 @@ library(MCMCglmm)
 library(gridExtra)
 library(gtools)
 
-raw_arabi_data <- read.csv2("./raw_data.csv")
+raw_arabi_data <- read.csv2("./data/raw_data.csv")
 arabi_data <- select(raw_arabi_data, ID, RIL, Block, Partner, HEIGHT, WEIGHT, SILIQUEN, NODEN)
 names(arabi_data) <- c("ID", "RIL", "block", "partner", "height", "weight", "silique", "branch")
 
