@@ -27,6 +27,7 @@ data {
     int col_mis[miss_J];
     int n_RIL;           // inbred lines
     int RIL[N];
+    int batch[N];        // batch
     vector[J] obs_mk[n_RIL];
     vector[K] y[N];
 }
@@ -54,6 +55,8 @@ parameters {
 
     # Intercept
     vector[K] w0;
+
+    vector[K] w_b;
 
     # RIL means
     vector[K] beta_RIL[n_RIL];
@@ -118,11 +121,12 @@ model {
         beta_RIL[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
 
     for (n in 1:N)
-        mu[n] = w0 + w * mk[RIL[n]] + beta_RIL[RIL[n]];
+        mu[n] = w0 + batch[n] * w_b + w * mk[RIL[n]] + beta_RIL[RIL[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     w0 ~ normal(0,5);
+    w_b ~ normal(0,5);
 
     L_Omega_G ~ lkj_corr_cholesky(2);
     L_sigma_G ~ cauchy(0, 2.5);
