@@ -117,6 +117,21 @@ VarCorr(multi_model)
 VarCorr(multi_model)$RIL
 
 
+#Muito mau comportado e incoerente com os univariados. Suspeito que seja
+#falta de replicação dentro de linhagens
+
+m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight_std, height_std, silique_std), id.vars = c('partner', 'block', 'ID', 'RIL'))
+#m_arabi_data = melt(select(arabi_data, ID, block, RIL, partner, weight, height, silique), id.vars = c('partner', 'block', 'ID', 'RIL'))
+multi_model = lmer(value ~ variable + variable:partner + variable:block + (0 + variable:partner|RIL),
+                   data = m_arabi_data, na.action = 'na.omit', control=lmerControl(check.conv.singular="warning"))
+summary(multi_model)
+VarCorr(multi_model)
+VarCorr(multi_model)$RIL
+diag(VarCorr(multi_model)$RIL)
+
+##########################
+# Univariate Models
+##########################
 
 ###################
 ## Silique
@@ -161,6 +176,26 @@ weight_model = lmer(weight_std ~ 1 + (0 + partner|RIL) + (1|block),
                     data = arabi_data, REML = FALSE, na.action = 'na.omit')
 summary(weight_model)
 varRIL = diag(VarCorr(weight_model)$RIL)
+(h2 = varRIL)
+
+# un-scaled per treatment
+weight_model_D = lmer(weight ~ (1|RIL),
+                       data = filter(arabi_data, partner == "D"))
+summary(weight_model_D)
+weight_model_S = lmer(weight ~ (1|RIL),
+                       data = filter(arabi_data, partner == "S"))
+summary(weight_model_S)
+varRIL = c("D" = VarCorr(weight_model_D)$RIL, "S" = VarCorr(weight_model_S)$RIL)
+(h2 = varRIL)
+
+# scaled per treatment
+weight_model_D = lmer(weight_std ~ (1|RIL),
+                       data = filter(arabi_data, partner == "D"))
+summary(weight_model_D)
+weight_model_S = lmer(weight_std ~ (1|RIL),
+                       data = filter(arabi_data, partner == "S"))
+summary(weight_model_S)
+varRIL = c("D" = VarCorr(weight_model_D)$RIL, "S" = VarCorr(weight_model_S)$RIL)
 (h2 = varRIL)
 
 ###################
