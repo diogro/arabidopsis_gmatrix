@@ -22,7 +22,7 @@ facet_wrap(~variable, ncol = 4, scale = "free_x")
 
 traits = c("height", "weight", "silique")
 
-raw_markers = read_csv("./data/BayxSha_2_Genotypes.csv")[-c(1:4),] %>% rename(RIL = order) %>% mutate(RIL = as.integer(RIL))
+raw_markers = read_csv("./data/BayxSha_2_Genotypes_imputed.csv", skip= 1)[-c(1:4),-2] %>% rename(RIL = order) %>% mutate(RIL = as.integer(RIL))
 raw_markers[] = lapply(raw_markers, function(x) {
                            x[x == "A"] = 1;
                            x[x == "B"] = -1;
