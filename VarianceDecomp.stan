@@ -1,3 +1,23 @@
+functions {
+    // square root of a matrix (elementwise)
+    matrix sqrt_mat(matrix x) {
+        matrix[dims(x)[1], dims(x)[2]] res;
+        for (n in 1:dims(x)[2]){
+            for (m in 1:dims(x)[1]){
+                res[m, n] = sqrt(x[m, n]);
+            }
+        }
+        return res;
+    }
+    // square root of a vector (elementwise)
+    vector sqrt_vec(vector x) {
+        vector[dims(x)[1]] res;
+        for (m in 1:dims(x)[1]){
+            res[m] = sqrt(x[m]);
+        }
+        return res;
+    }
+}
 data {
     int<lower=0> N_s;      // individuals
     int<lower=0> N_d;      // individuals
@@ -8,7 +28,7 @@ data {
     int RIL_d[N_d];
     int batch_d[N_d];        // batch
     vector[K] y_s[N_s];
-    vector[K] y_d[N_d];u
+    vector[K] y_d[N_d];
 }
 transformed data{
     vector[2*K] zeros;
@@ -39,12 +59,9 @@ parameters {
 
 }
 transformed parameters{
-    vector[J] mk[n_RIL];
-
     // global and local variance parameters, and the input weights
     vector<lower=0>[K] L_sigma_R_s;
     vector<lower=0>[K] L_sigma_R_d;
-    matrix[K, J] w_env;
     matrix[K,K] L_Sigma_R_s;
     matrix[K,K] L_Sigma_R_d;
 
@@ -54,17 +71,6 @@ transformed parameters{
     L_sigma_R_d = 2.5 * r1_sigma_R_d .* sqrt_vec(r2_sigma_R_d);
     L_Sigma_R_d = diag_pre_multiply(L_sigma_R_d, L_Omega_R_d);
 
-
-    lambda = r1_local .* sqrt_mat(r2_local);
-
-    eta = r1_localPlus .* sqrt_mat(r2_localPlus);
-
-    etaLambda = lambda .* eta;
-    for(j in 1:J){
-        for(k in 1:K){
-            sd_theta[k, j] = etaLambda[k, j] * tau[k];
-        }
-    }
 }
 model {
     vector[K] mu_s[N_s];

@@ -9,3 +9,4 @@ figures/*
 data/*
 *.sas
 *.rda
+arabidopsis_gmatrix.Rproj
