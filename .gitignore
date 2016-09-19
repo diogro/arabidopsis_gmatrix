@@ -7,6 +7,7 @@ figures/*
 *.xls
 *.xlsx
 data/*
+data
 *.sas
 *.rda
 arabidopsis_gmatrix.Rproj
