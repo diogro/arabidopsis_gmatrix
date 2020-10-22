@@ -98,13 +98,13 @@ model {
     wb_s ~ normal(0,5);
     wb_d ~ normal(0,5);
 
-    L_Omega_G ~ lkj_corr_cholesky(2);
+    L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
 
-    L_Omega_R_s ~ lkj_corr_cholesky(2);
+    L_Omega_R_s ~ lkj_corr_cholesky(4);
     r1_sigma_R_s ~ normal(0.0, 1.0);
     r2_sigma_R_s ~ inv_gamma(0.5, 0.5);
-    L_Omega_R_d ~ lkj_corr_cholesky(2);
+    L_Omega_R_d ~ lkj_corr_cholesky(4);
     r1_sigma_R_d ~ normal(0.0, 1.0);
     r2_sigma_R_d ~ inv_gamma(0.5, 0.5);
 }

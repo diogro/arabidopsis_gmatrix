@@ -22,7 +22,11 @@ input_data = list(N_s     = sum(!mask_L),
 fit = stan(file = "./VarianceDecomp.stan", data = input_data, iter = 400, chains = 10, 
            control = list(adapt_delta = 0.9))
 
+fit
 summary(fit, pars = "G")
+traceplot(fit, pars = "G")
+traceplot(fit, pars = "R_s")
+traceplot(fit, pars = "R_d")
 G = colMeans(extract(fit, pars = "G")[[1]])
 R_s = colMeans(extract(fit, pars = "R_s")[[1]])
 R_d = colMeans(extract(fit, pars = "R_d")[[1]])
